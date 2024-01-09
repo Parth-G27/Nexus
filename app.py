@@ -3,8 +3,6 @@ from pymongo import MongoClient
 from datetime import datetime
 
 from urllib.parse import quote_plus
-from pymongo import MongoClient
-
 # Replace 'username' and 'password' with your actual username and password
 username = 'jeswin'
 password = 'jeswin'
@@ -18,6 +16,7 @@ client = MongoClient(uri)
 db = client['logistics_app']
 users_collection = db['users']
 requests_collection = db['requests']
+# Helper functions
 
 
 def create_user(username, password, user_type):
@@ -73,8 +72,9 @@ def add_communication(request_id, user_type, message):
         {'$push': {'communication': communication_data}}
     )
 
-
 # Streamlit UI
+
+
 def main():
     st.set_page_config(
         page_title="Nexus App",
@@ -97,7 +97,7 @@ def main():
     # Sidebar for login
     with st.sidebar:
         st.markdown(
-            "<h1 style='text-align: center; color: #444;'>Logistics App</h1>", unsafe_allow_html=True)
+            "<h1 style='text-align: center; color: #444;'>Nexus App</h1>", unsafe_allow_html=True)
         st.header("Login")
         username = st.text_input("Username:")
         password = st.text_input("Password:", type="password")
@@ -134,86 +134,68 @@ def main():
                 requests_to_user = get_requests_to_user(username)
                 for request in requests_to_user:
                     st.markdown(
-                        f"<div class='st-eb'>Request ID: {request['_id']}, Item: {request['item_name']}, Quantity: {request['quantity']}, Quoted Price: {request['quoted_price']}</div>", unsafe_allow_html=True)
+                        f"<div class='st-eb'>Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}, Quantity: {request.get('quantity', 'N/A')}, Quoted Price: {request.get('quoted_price', 'N/A')}</div>", unsafe_allow_html=True)
 
                 # Requests Sent by You
                 st.subheader("Requests Sent by You")
                 requests_by_user = get_requests_by_user(username)
                 for request in requests_by_user:
                     st.markdown(
-                        f"<div class='st-eb'>Request ID: {request['_id']}, Item: {request['item_name']}, Quantity: {request['quantity']}, Quoted Price: {request['quoted_price']}</div>", unsafe_allow_html=True)
+                        f"<div class='st-eb'>Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}, Quantity: {request.get('quantity', 'N/A')}, Quoted Price: {request.get('quoted_price', 'N/A')}</div>", unsafe_allow_html=True)
+
         else:
             st.error("Invalid credentials. Please try again.")
-        # Goods Request section (common for all users)
-        st.header("Goods Request")
 
-        item_name = st.text_input("Item Name:")
-        quantity = st.number_input("Quantity:", min_value=1, value=1)
-        quoted_price = st.number_input("Quoted Price:")
-        recipient_employee = st.selectbox("Select Recipient Employee:", [
-            'Employee1', 'Employee2'])
-        if st.button("Send Request"):
-            # Logic to create a new request
-            create_request(sender=username, receiver=recipient_employee,
-                           item_name=item_name, quantity=quantity, quoted_price=quoted_price)
-            st.success("Request sent successfully!")
+    # Goods Request section (common for all users)
+    st.header("Goods Request")
 
-        if st.button("Accept Request"):
-            # Logic to show pending requests and accept them
-            pending_requests = get_requests_to_user(username)
-            if pending_requests.count() > 0:
-                selected_request = st.radio("Select Request to Accept:", [
-                                            f"Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}" for request in pending_requests])
-                if st.button("Accept Selected Request"):
-                    # Extracting the request ID from the selected string
-                    request_id = selected_request.split(" ")[3]
-                    update_request_status(request_id, 'ACCEPTED')
-                    st.success("Request accepted successfully!")
-                else:
-                    st.warning("Please select a request to accept.")
+    item_name = st.text_input("Item Name:")
+    quantity = st.number_input("Quantity:", min_value=1, value=1)
+    quoted_price = st.number_input("Quoted Price:")
+    recipient_employee = st.selectbox("Select Recipient Employee:", [
+                                      'sender_user', 'receiver_user'])
+
+    if st.button("Send Request"):
+        # Logic to create a new request
+        create_request(sender=username, receiver=recipient_employee,
+                       item_name=item_name, quantity=quantity, quoted_price=quoted_price)
+        st.success("Request sent successfully!")
+
+    if st.button("Accept Request"):
+        # Logic to show pending requests and accept them
+        pending_requests = get_requests_to_user(username)
+        if pending_requests.count() > 0:
+            selected_request = st.radio("Select Request to Accept:", [
+                                        f"Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}" for request in pending_requests])
+            if st.button("Accept Selected Request"):
+                # Extracting the request ID from the selected string
+                request_id = selected_request.split(" ")[3]
+                update_request_status(request_id, 'ACCEPTED')
+                st.success("Request accepted successfully!")
             else:
-                st.info("No pending requests to accept.")
+                st.warning("Please select a request to accept.")
+        else:
+            st.info("No pending requests to accept.")
 
-        if st.button("Complete Request"):
-            # Logic to show ongoing requests and mark them as completed
-            ongoing_requests = get_requests_by_user(username)
-            if ongoing_requests.count() > 0:
-                selected_request = st.radio("Select Request to Complete:", [
-                                            f"Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}" for request in ongoing_requests])
-                if st.button("Complete Selected Request"):
-                    # Extracting the request ID from the selected string
-                    request_id = selected_request.split(" ")[3]
-                    update_request_status(request_id, 'COMPLETED')
-                    st.success("Request completed successfully!")
-                else:
-                    st.warning("Please select a request to complete.")
+    if st.button("Complete Request"):
+        # Logic to show ongoing requests and mark them as completed
+        ongoing_requests = get_requests_by_user(username)
+        if ongoing_requests.count() > 0:
+            selected_request = st.radio("Select Request to Complete:", [
+                                        f"Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}" for request in ongoing_requests])
+            if st.button("Complete Selected Request"):
+                # Extracting the request ID from the selected string
+                request_id = selected_request.split(" ")[3]
+                update_request_status(request_id, 'COMPLETED')
+                st.success("Request completed successfully!")
             else:
-                st.info("No ongoing requests to complete.")
+                st.warning("Please select a request to complete.")
+        else:
+            st.info("No ongoing requests to complete.")
 
-        # Communication updates
-        st.header("Communication Updates")
-
-        communication_message = st.text_input("Enter message:")
-        if st.button("Send Message"):
-            # Logic to add communication message to a request
-            ongoing_requests = get_requests_by_user(username)
-            if ongoing_requests.count() > 0:
-                selected_request = st.radio("Select Request:", [
-                                            f"Request ID: {request['_id']}, Item: {request.get('item_name', 'N/A')}" for request in ongoing_requests])
-                if st.button("Send Message to Selected Request"):
-                    # Extracting the request ID from the selected string
-                    request_id = selected_request.split(" ")[3]
-                    add_communication(
-                        request_id, user_type='Sender', message=communication_message)
-                    st.success("Message sent successfully!")
-                else:
-                    st.warning("Please select a request to send a message.")
-            else:
-                st.info("No ongoing requests to send a message.")
-
-        # Delivery history and goods track
-        st.header("Delivery History and Goods Track")
-        # Logic to display delivery history and track goods
+    # Delivery history and goods track
+    st.header("Delivery History and Goods Track")
+    # Logic to display delivery history and track goods
 
 
 if __name__ == '__main__':
